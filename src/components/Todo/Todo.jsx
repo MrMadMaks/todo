@@ -3,7 +3,7 @@ import { FaRegTrashAlt } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import './Todo.less';
 
-const Todo = ({ todo, toggleComplete, deleteTodo, imageList }) => {
+const Todo = ({ todo, toggleComplete, deleteTodo }) => {
     return (
         <li className={todo.completed ? 'itemComplete' : 'item'}>
             <div className="row">
@@ -13,11 +13,7 @@ const Todo = ({ todo, toggleComplete, deleteTodo, imageList }) => {
                     <div onClick={() => toggleComplete(todo)} className={todo.completed ? 'textComplete' : 'text'}>{todo.text}</div>
                     <h2>Описание</h2>
                     <div className={todo.completed ? 'textComplete' : 'text'}>{todo.descr}</div>
-                    <div >{imageList.map((url, i) => {
-                        if (i === (imageList.length - 1)) {
-                            return <img key={url} className='picture' src={url} alt="твой файл" />
-                        }
-                    })}</div>
+                    <img className='picture' src={todo.url} alt="твой файл" />
                     <div className={dayjs(todo.date).isAfter(dayjs()) ? null : 'deadline'}>{dayjs(todo.date).isAfter(dayjs()) ? `${todo.date}` : 'Задача просрочена!'}</div>
                 </div>
             </div>

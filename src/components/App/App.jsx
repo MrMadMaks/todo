@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AiOutlinePlus } from 'react-icons/ai/';
 import Todo from '../Todo/Todo';
 import { db } from '../../firebase';
@@ -21,20 +21,20 @@ function App() {
   console.log(imageList)
 
   const imagesListRef = ref(storage, 'images/')
+
   const uploadImage = () => {
     if (imageUpload === null) return;
-
     const imageRef = ref(storage, `images/${imageUpload.name + v4()}`);
-    uploadBytes(imageRef, imageUpload).then((snaphot) => {
-      getDownloadURL(snaphot.ref).then((url) => {
+    uploadBytes(imageRef, imageUpload).then((snapshot) => {
+      getDownloadURL(snapshot.ref).then((url) => {
         setImageList((prev) => [...prev, url])
       })
     })
   }
 
   useEffect(() => {
-    listAll(imagesListRef).then((responce) => {
-      responce.items.forEach(item => {
+    listAll(imagesListRef).then((response) => {
+      response.items.forEach(item => {
         getDownloadURL(item).then(url => {
           setImageList((prev) => [...prev, url])
         })
@@ -71,6 +71,7 @@ function App() {
       completed: false,
       descr: descr,
       date: date,
+      url: imageList[imageList.length - 1]
     })
     setInput('')
     setDescr('')
@@ -86,7 +87,7 @@ function App() {
       <div className="wrapper">
         <div className="_container">
           <h1 className='title' >Список задач</h1>
-          <form onSubmit={createTodo} className="form" method='post' enctype='multipart/formdata' >
+          <form onSubmit={createTodo} className="form" method='post' encType='multipart/formdata' >
             <input value={input} onChange={(e) => setInput(e.target.value)} type="text" className="input" placeholder='Добавить задачу' />
             <input value={descr} onChange={(e) => setDescr(e.target.value)} type="text" className="input" placeholder='Добавить описание' />
             <input value={date} onChange={(e) => setDate(e.target.value)} type="date" className="input" placeholder='Дедлайн' />
