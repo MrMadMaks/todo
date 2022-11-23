@@ -1,105 +1,152 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AiOutlinePlus } from 'react-icons/ai/';
 import Todo from '../Todo/Todo';
 import { db } from '../../firebase';
-import { query, collection, onSnapshot, updateDoc, doc, addDoc, deleteDoc } from 'firebase/firestore';
+import {
+  query,
+  collection,
+  onSnapshot,
+  updateDoc,
+  doc,
+  addDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import { storage } from '../../firebase';
-import { ref, uploadBytes, listAll, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 } from 'uuid';
 
 import './App.less';
 
 function App() {
+  const [todos, setTodos] = useState([]);
+  const [data, setData] = useState({ title: '', desc: '', date: '', img: null });
+  const imageInputRef = useRef();
 
-  const [todos, setTodos] = useState([])
-  const [input, setInput] = useState('')
-  const [descr, setDescr] = useState('')
-  const [date, setDate] = useState('')
-  const [imageUpload, setImageUpload] = useState(null)
-  const [imageList, setImageList] = useState([])
-
-  console.log(imageList)
-
-  const imagesListRef = ref(storage, 'images/')
-
-  const uploadImage = () => {
-    if (imageUpload === null) return;
-    const imageRef = ref(storage, `images/${imageUpload.name + v4()}`);
-    uploadBytes(imageRef, imageUpload).then((snapshot) => {
-      getDownloadURL(snapshot.ref).then((url) => {
-        setImageList((prev) => [...prev, url])
-      })
-    })
-  }
+  const uploadImage = async () => {
+    const imageRef = ref(storage, `images/${data.img.name + v4()}`);
+    const snapshot = await uploadBytes(imageRef, data.img);
+    const imageLink = await getDownloadURL(snapshot.ref);
+    return imageLink;
+  };
 
   useEffect(() => {
-    listAll(imagesListRef).then((response) => {
-      response.items.forEach(item => {
-        getDownloadURL(item).then(url => {
-          setImageList((prev) => [...prev, url])
-        })
-      })
-    })
-  }, [])
-
-  useEffect(() => {
-    const q = query(collection(db, 'todos'))
+    const q = query(collection(db, 'todos'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let todosArr = []
-      querySnapshot.forEach(doc => {
-        todosArr.push({ ...doc.data(), id: doc.id })
+      let todosArr = [];
+      querySnapshot.forEach((doc) => {
+        console.log(doc.data());
+        todosArr.push({ ...doc.data(), id: doc.id });
       });
-      setTodos(todosArr)
-    })
-    return () => unsubscribe()
-  }, [])
+      setTodos(todosArr);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  /**
+   * @param  {} todo
+   */
   const toggleComplete = async (todo) => {
     await updateDoc(doc(db, 'todos', todo.id), {
-      completed: !todo.completed
-    })
-  }
+      completed: !todo.completed,
+    });
+  };
+
 
   const createTodo = async (e) => {
-    e.preventDefault()
-    if (input === '') {
-      alert('Введите корректное значение')
-      return
+    e.preventDefault();
+    if (data.title === '') {
+      alert('Введите корректное значение');
+      return;
     }
-    await addDoc(collection(db, 'todos'), {
-      text: input,
+
+    const imgLink = await uploadImage();
+
+    const test = await addDoc(collection(db, 'todos'), {
+      text: data.title,
       completed: false,
-      descr: descr,
-      date: date,
-      url: imageList[imageList.length - 1]
-    })
-    setInput('')
-    setDescr('')
-    setDate('')
-  }
+      descr: data.desc,
+      date: data.date,
+      url: imgLink,
+    });
+
+    console.log('test', test);
+    setData({ title: '', desc: '', date: '', img: null });
+    imageInputRef.current.value = "";
+  };
 
   const deleteTodo = async (id) => {
-    await deleteDoc(doc(db, 'todos', id))
-  }
+    await deleteDoc(doc(db, 'todos', id));
+  };
+
+  const handleData = (e) => {
+    if (e.target.name === 'img') {
+      setData((prev) => ({ ...prev, img: e.target.files[0] }));
+    } else {
+      setData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    }
+  };
 
   return (
     <div className="App">
       <div className="wrapper">
         <div className="_container">
-          <h1 className='title' >Список задач</h1>
-          <form onSubmit={createTodo} className="form" method='post' encType='multipart/formdata' >
-            <input value={input} onChange={(e) => setInput(e.target.value)} type="text" className="input" placeholder='Добавить задачу' />
-            <input value={descr} onChange={(e) => setDescr(e.target.value)} type="text" className="input" placeholder='Добавить описание' />
-            <input value={date} onChange={(e) => setDate(e.target.value)} type="date" className="input" placeholder='Дедлайн' />
-            <input onChange={(e) => setImageUpload(e.target.files[0])} type="file" className="input" />
-            <button onClick={uploadImage} className="button" ><AiOutlinePlus size={35} /></button>
+          <h1 className="title">Список задач</h1>
+          <form
+            onSubmit={(e) => createTodo(e)}
+            className="form"
+            method="post"
+            encType="multipart/formdata"
+          >
+            <input
+              value={data.title}
+              name="title"
+              onChange={(e) => handleData(e)}
+              type="text"
+              className="input"
+              placeholder="Добавить задачу"
+            />
+            <input
+              value={data.desc}
+              name="desc"
+              onChange={(e) => handleData(e)}
+              type="text"
+              className="input"
+              placeholder="Добавить описание"
+            />
+            <input
+              value={data.date}
+              name="date"
+              onChange={(e) => handleData(e)}
+              type="date"
+              className="input"
+              placeholder="Дедлайн"
+            />
+            <input
+              ref={imageInputRef}
+              name="img"
+              onChange={(e) => handleData(e)}
+              type="file"
+              className="input"
+            />
+            <button type="submit" className="button">
+              <AiOutlinePlus size={35} />
+            </button>
           </form>
           <ul>
-            {todos.map((todo) => (
-              <Todo key={todo.id} todo={todo} toggleComplete={toggleComplete} deleteTodo={deleteTodo} imageList={imageList} />
-            ))}
+            {todos &&
+              todos.map((todo, idx) => (
+                <Todo
+                  key={todo.id}
+                  todo={todo}
+                  toggleComplete={toggleComplete}
+                  deleteTodo={deleteTodo}
+                  imageList={todo.url || ''}
+                />
+              ))}
           </ul>
-          {todos.length < 1 ? null : <p className='count' >{`Количество задач: ${todos.length}`}</p>}
+          {todos.length < 1 ? null : (
+            <p className="count">{`Количество задач: ${todos.length}`}</p>
+          )}
         </div>
       </div>
     </div>
